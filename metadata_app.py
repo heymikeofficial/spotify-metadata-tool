@@ -8,8 +8,11 @@ st.set_page_config(page_title="Spotify Metadata Tool")
 st.title("🎧 Spotify Metadata Extractor")
 
 # ✅ Your real Spotify Developer credentials
-CLIENT_ID = 'f191c08bc7c8474bb153c147004897b1'
-CLIENT_SECRET = '6aa04c79794140e1a1248ae0b4964068'
+import os
+
+CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
+CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
+
 
 # ✅ Set up Spotipy with Client Credentials flow
 sp = spotipy.Spotify(auth_manager=SpotifyClientCredentials(
