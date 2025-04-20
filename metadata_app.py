@@ -1,7 +1,11 @@
-
+import streamlit as st
 import spotipy
 from spotipy.oauth2 import SpotifyClientCredentials
 import re
+
+# ✅ Configure the page
+st.set_page_config(page_title="Spotify Metadata Tool")
+st.title("🎧 Spotify Metadata Extractor")
 
 # ✅ Your real Spotify Developer credentials
 CLIENT_ID = 'f191c08bc7c8474bb153c147004897b1'
@@ -21,43 +25,61 @@ def extract_id(url):
         return match.group(1), match.group(2)
     return None, None
 
-# 🎧 Print metadata for a single track
-def print_track(track):
-    print(f"\n🎵 Track: {track['name']}")
-    print(f"🎤 Artist(s): {', '.join([artist['name'] for artist in track['artists']])}")
-    print(f"💿 Album: {track['album']['name']}")
-    print(f"📅 Release Date: {track['album']['release_date']}")
-    print(f"🏷️ Label: {track['album'].get('label', 'Not available')}")
-    print(f"🔖 ISRC: {track['external_ids'].get('isrc', 'Not available')}")
+# 🎧 Display track metadata
+def display_track(track):
+    st.subheader("🎵 Track Info")
+    st.write(f"**Title:** {track['name']}")
+    st.write(f"**Artist(s):** {', '.join([artist['name'] for artist in track['artists']])}")
+    st.write(f"**Album:** {track['album']['name']}")
+    st.write(f"**Release Date:** {track['album']['release_date']}")
+    st.write(f"**Label:** {track['album'].get('label', 'Not available')}")
+    st.write(f"**ISRC:** {track['external_ids'].get('isrc', 'Not available')}")
+    st.write(f"**Explicit:** {'Yes' if track['explicit'] else 'No'}")
+    st.write(f"**Duration:** {int(track['duration_ms'] // 60000)}:{int((track['duration_ms'] % 60000) / 1000):02d}")
 
-# 📀 Print metadata for an album and all its tracks (with ISRCs)
-def print_album(album):
-    print(f"\n💿 Album: {album['name']}")
-    print(f"🎤 Artist(s): {', '.join([artist['name'] for artist in album['artists']])}")
-    print(f"📅 Release Date: {album['release_date']}")
-    print(f"🏷️ Label: {album.get('label', 'Not available')}")
-    print(f"🔢 Total Tracks: {album['total_tracks']}")
+    # Album artwork
+    st.image(track['album']['images'][0]['url'], width=250)
 
-    print("\n🔎 Track List with ISRCs:")
+    # Spotify share link
+    st.markdown(f"[🔗 Open in Spotify]({track['external_urls']['spotify']})", unsafe_allow_html=True)
+
+# 📀 Display album metadata and tracklist
+def display_album(album):
+    st.subheader("💿 Album Info")
+    st.write(f"**Title:** {album['name']}")
+    st.write(f"**Artist(s):** {', '.join([artist['name'] for artist in album['artists']])}")
+    st.write(f"**Release Date:** {album['release_date']}")
+    st.write(f"**Label:** {album.get('label', 'Not available')}")
+    st.write(f"**Total Tracks:** {album['total_tracks']}")
+
+    # Album artwork
+    st.image(album['images'][0]['url'], width=250)
+
+    # Spotify share link
+    st.markdown(f"[🔗 Open in Spotify]({album['external_urls']['spotify']})", unsafe_allow_html=True)
+
+    # Track list with ISRCs
+    st.subheader("📜 Track List + ISRCs")
     for track in album['tracks']['items']:
         try:
-            track_data = sp.track(track['id'])  # Fetch full track metadata
+            track_data = sp.track(track['id'])
             isrc = track_data['external_ids'].get('isrc', 'Not available')
-            print(f"- 🎵 {track['name']} | ISRC: {isrc}")
+            st.write(f"- **{track['name']}** | ISRC: `{isrc}`")
         except Exception as e:
-            print(f"- 🎵 {track['name']} | ⚠️ Error retrieving ISRC: {e}")
+            st.write(f"- **{track['name']}** | ⚠️ Error retrieving ISRC: {e}")
 
-# 🚀 Main logic
-def main():
-    url = input("Paste a Spotify track or album URL: ")
-    item_type, item_id = extract_id(url)
+# 🚀 App logic
+spotify_url = st.text_input("Paste a Spotify track or album URL:")
 
-    if item_type == "track":
-        print_track(sp.track(item_id))
-    elif item_type == "album":
-        print_album(sp.album(item_id))
+if spotify_url:
+    item_type, item_id = extract_id(spotify_url)
+    if not item_id:
+        st.error("❌ Invalid Spotify URL. Please paste a valid track or album link.")
     else:
-        print("❌ Invalid or unsupported URL")
-
-if __name__ == "__main__":
-    main()
+        try:
+            if item_type == "track":
+                display_track(sp.track(item_id))
+            elif item_type == "album":
+                display_album(sp.album(item_id))
+        except Exception as e:
+            st.error(f"An error occurred: {e}")
